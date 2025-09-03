@@ -1,25 +1,63 @@
 {
   "name": "aobra-web",
-  "version": "0.1.0",
-  "private": true,
+  "version": "1.0.0",
+  "description": "Plataforma Rezo - Sistema de Atendimentos Espirituais e Terapêuticos",
+  "main": "index.js",
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
+    "dev": "next dev",
+    "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "next lint",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "type-check": "tsc --noEmit",
+    "db:seed": "tsx scripts/seedAtendimentos.ts",
+    "db:migrate": "tsx scripts/migrateAtendimentos.ts"
   },
+  "keywords": [
+    "rezo",
+    "atendimentos",
+    "espiritual",
+    "terapia",
+    "holistico",
+    "plataforma"
+  ],
+  "author": "Rezo Team",
+  "license": "MIT",
   "dependencies": {
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
-    "next": "15.5.0"
+    "next": "^14.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "firebase": "^10.7.0",
+    "typescript": "^5.2.0",
+    "tailwindcss": "^3.3.0",
+    "lucide-react": "^0.294.0",
+    "react-hook-form": "^7.48.0",
+    "react-hot-toast": "^2.4.1"
   },
   "devDependencies": {
-    "typescript": "^5",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "15.5.0",
-    "@eslint/eslintrc": "^3"
-  }
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@types/node": "^20.0.0",
+    "eslint": "^8.50.0",
+    "eslint-config-next": "^14.0.0",
+    "prettier": "^3.0.0",
+    "jest": "^29.7.0",
+    "@testing-library/react": "^14.0.0",
+    "@testing-library/jest-dom": "^6.1.0",
+    "husky": "^8.0.0",
+    "lint-staged": "^15.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rezoteam/rezo-web.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rezoteam/rezo-web/issues"
+  },
+  "homepage": "https://rezo.com"
 }

@@ -40,3 +40,115 @@ a {
     color-scheme: dark;
   }
 }
+
+/* Products Common Styles */
+.btn-monday {
+  background: #0085ff;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-monday:hover {
+  background: #0073e6;
+}
+
+.btn-monday:disabled {
+  background: #d0d4d9;
+  cursor: not-allowed;
+}
+
+.monday-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #323338;
+  margin-bottom: 6px;
+}
+
+.monday-input, .monday-select, .monday-textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #d0d4d9;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #323338;
+  background: white;
+  transition: all 0.2s ease;
+}
+
+.monday-input:focus, .monday-select:focus, .monday-textarea:focus {
+  outline: none;
+  border-color: #0085ff;
+  box-shadow: 0 0 0 2px rgba(0, 133, 255, 0.2);
+}
+
+.monday-textarea {
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+}
+
+.monday-select {
+  cursor: pointer;
+}
+
+/* Loading and Empty States */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  gap: 16px;
+}
+
+.empty-container {
+  text-align: center;
+  padding: 60px 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e1e5e9;
+  border-top: 3px solid #0085ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Status Colors */
+.status-active {
+  color: #00ca72;
+}
+
+.status-inactive {
+  color: #ff3333;
+}
+
+.status-pending {
+  color: #ffcb00;
+}
+
+/* Responsive Helpers */
+@media (max-width: 768px) {
+  .hide-mobile {
+    display: none;
+  }
+  
+  .btn-monday {
+    width: 100%;
+    justify-content: center;
+  }
+}

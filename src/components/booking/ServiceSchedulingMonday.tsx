@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Swal from 'sweetalert2';
 import { Service } from '../../services/servicesService';
 import { createBooking } from '../../services/bookingServiceClean';
 import { 
@@ -69,6 +70,7 @@ const ServiceScheduling: React.FC<ServiceSchedulingProps> = ({
   const [customerName, setCustomerName] = useState(user?.displayName || '');
   const [customerEmail, setCustomerEmail] = useState(user?.email || '');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [customerCpf, setCustomerCpf] = useState('');
   const [customerNotes, setCustomerNotes] = useState('');
   const [address, setAddress] = useState('');
   const [complement, setComplement] = useState('');
@@ -88,6 +90,32 @@ const ServiceScheduling: React.FC<ServiceSchedulingProps> = ({
   };
 
   const next7Days = getNext7Days();
+
+  // Função para formatar CPF/CNPJ
+  const formatCpfCnpj = (value: string): string => {
+    // Remove tudo que não é número
+    const numbers = value.replace(/\D/g, '');
+    
+    // Se tem 11 dígitos ou menos, formatar como CPF
+    if (numbers.length <= 11) {
+      return numbers
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+    }
+    
+    // Se tem mais de 11, formatar como CNPJ
+    return numbers
+      .replace(/(\d{2})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1/$2')
+      .replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+  };
+
+  const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatCpfCnpj(e.target.value);
+    setCustomerCpf(formatted);
+  };
 
   useEffect(() => {
     console.log('🚀 ServiceSchedulingMonday mounted with service:', {
@@ -174,8 +202,87 @@ const ServiceScheduling: React.FC<ServiceSchedulingProps> = ({
     setCurrentStep('details');
   };
 
+  // Função para processar o pagamento
+  const processPayment = async (bookingId: string, bookingData: BookingData) => {
+    try {
+      const paymentData = {
+        houseId: service.houseId,
+        amount: service.basePrice,
+        packageName: service.title,
+        userId: user!.uid,
+        bookingId: bookingId,
+        serviceId: service.id!,
+        date: selectedSlot!.date,
+        billingType: "CREDIT_CARD",
+        customerName: customerName.trim(),
+        cpfCnpj: customerCpf.trim(),
+        email: customerEmail.trim()
+      };
+
+      console.log('💳 Processando pagamento:', paymentData);
+
+      const response = await fetch('https://primary-production-9acc.up.railway.app/webhook/create-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(paymentData)
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || result.error) {
+        throw new Error(result.error || 'Erro ao processar pagamento');
+      }
+
+      // Verificar se o checkout foi criado com sucesso
+      if (!result.checkoutUrl || result.checkoutUrl === null || result.checkoutUrl === '') {
+        throw new Error('Erro ao gerar link de pagamento');
+      }
+
+      // Mostrar SweetAlert informando sobre o redirecionamento
+      await Swal.fire({
+        title: '🎉 Agendamento Confirmado!',
+        html: `
+          <div style="text-align: center;">
+            <p style="margin-bottom: 16px;">Seu atendimento foi agendado com sucesso!</p>
+            <p style="margin-bottom: 16px;">Você será redirecionado para a página de pagamento para finalizar sua reserva.</p>
+            <p style="color: #666; font-size: 14px;">Após o pagamento, você receberá a confirmação por email.</p>
+          </div>
+        `,
+        icon: 'success',
+        confirmButtonText: 'Ir para Pagamento',
+        confirmButtonColor: '#28a745',
+        allowOutsideClick: false,
+        allowEscapeKey: false
+      });
+
+      // Redirecionar para a página de pagamento
+      window.location.href = result.checkoutUrl;
+
+    } catch (error: any) {
+      console.error('❌ Erro no pagamento:', error);
+      showToast({
+        type: 'error',
+        title: 'Erro no pagamento',
+        message: error.message || 'Não foi possível processar o pagamento'
+      });
+      throw error;
+    }
+  };
+
   const handleBookingSubmit = async () => {
     if (!selectedSlot || !user) return;
+
+    // Validar campos obrigatórios
+    if (!customerName.trim() || !customerEmail.trim() || !customerCpf.trim()) {
+      showToast({
+        type: 'error',
+        title: 'Campos obrigatórios',
+        message: 'Por favor, preencha nome, email e CPF/CNPJ'
+      });
+      return;
+    }
 
     try {
       setSubmitting(true);
@@ -227,15 +334,15 @@ const ServiceScheduling: React.FC<ServiceSchedulingProps> = ({
       console.log('📋 Creating booking:', bookingData);
       const bookingId = await createBooking(bookingData);
       
-      showToast({
-        type: 'success',
-        title: 'Agendamento realizado!',
-        message: 'Seu atendimento foi agendado com sucesso'
-      });
-
-      if (onBookingComplete) {
-        onBookingComplete(bookingId);
+      if (!bookingId) {
+        throw new Error('Erro ao criar agendamento');
       }
+
+      console.log('✅ Agendamento criado com ID:', bookingId);
+
+      // Processar pagamento após criar o agendamento
+      await processPayment(bookingId, bookingData);
+
     } catch (error: any) {
       console.error('❌ Error creating booking:', error);
       showToast({
@@ -410,6 +517,19 @@ const ServiceScheduling: React.FC<ServiceSchedulingProps> = ({
                   />
                 </div>
 
+                <div className="form-group">
+                  <label className="monday-label">CPF/CNPJ *</label>
+                  <input
+                    type="text"
+                    value={customerCpf}
+                    onChange={handleCpfChange}
+                    className="monday-input"
+                    placeholder="000.000.000-00"
+                    maxLength={18}
+                    required
+                  />
+                </div>
+
                 {service.isInPerson && (
                   <>
                     <div className="form-group full-width">
@@ -458,7 +578,7 @@ const ServiceScheduling: React.FC<ServiceSchedulingProps> = ({
                 <button
                   onClick={() => setCurrentStep('confirmation')}
                   className="btn-primary"
-                  disabled={!customerName.trim() || !customerEmail.trim()}
+                  disabled={!customerName.trim() || !customerEmail.trim() || !customerCpf.trim()}
                 >
                   Continuar
                 </button>

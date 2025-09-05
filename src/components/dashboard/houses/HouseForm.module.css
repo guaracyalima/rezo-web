@@ -1,0 +1,377 @@
+
+/* HouseForm.module.css */
+.houseFormContainer {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.formHeader {
+  margin-bottom: 30px;
+}
+
+.formHeader h2 {
+  margin: 0 0 20px 0;
+  color: #323338;
+  font-size: 24px;
+  text-align: center;
+}
+
+.stepsIndicator {
+  position: relative;
+  margin-bottom: 30px;
+}
+
+.stepsProgress {
+  position: absolute;
+  top: 20px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #e1e5e9;
+  z-index: 1;
+}
+
+.progressBar {
+  height: 100%;
+  background: #0085ff;
+  transition: width 0.3s ease;
+}
+
+.stepsList {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  z-index: 2;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: white;
+  padding: 10px;
+}
+
+.stepIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #e1e5e9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  margin-bottom: 8px;
+  transition: all 0.3s ease;
+}
+
+.step.active .stepIcon {
+  background: #0085ff;
+  color: white;
+}
+
+.step.completed .stepIcon {
+  background: #00c875;
+  color: white;
+}
+
+.stepTitle {
+  font-size: 12px;
+  text-align: center;
+  color: #676879;
+  max-width: 80px;
+}
+
+.step.active .stepTitle {
+  color: #0085ff;
+  font-weight: 600;
+}
+
+.stepContent {
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.stepContent h3 {
+  margin: 0 0 8px 0;
+  color: #323338;
+  font-size: 20px;
+}
+
+.stepContent p {
+  margin: 0 0 24px 0;
+  color: #676879;
+}
+
+.formGroup {
+  margin-bottom: 20px;
+}
+
+.formGroup label {
+  display: block;
+  margin-bottom: 6px;
+  color: #323338;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.formGroup input,
+.formGroup select,
+.formGroup textarea {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e1e5e9;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border-color 0.2s ease;
+}
+
+.formGroup input:focus,
+.formGroup select:focus,
+.formGroup textarea:focus {
+  outline: none;
+  border-color: #0085ff;
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.businessInfoSection {
+  background: #f8f9fa;
+  border: 1px solid #e1e5e9;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+}
+
+.businessInfoSection h4 {
+  margin: 0 0 8px 0;
+  color: #323338;
+  font-size: 16px;
+}
+
+.sectionDescription {
+  color: #676879;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.errorMessage {
+  background: #ffebee;
+  color: #c62828;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.formFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 0;
+}
+
+.footerRight {
+  display: flex;
+  gap: 12px;
+}
+
+.btnPrimary,
+.btnSecondary,
+.btnSuccess,
+.btnCancel {
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.btnPrimary {
+  background: #0085ff;
+  color: white;
+}
+
+.btnPrimary:hover {
+  background: #0073e6;
+}
+
+.btnSecondary {
+  background: #f5f6f8;
+  color: #676879;
+  border: 2px solid #e1e5e9;
+}
+
+.btnSecondary:hover {
+  background: #e1e5e9;
+}
+
+.btnSuccess {
+  background: #00c875;
+  color: white;
+}
+
+.btnSuccess:hover {
+  background: #00b366;
+}
+
+.btnSuccess:disabled {
+  background: #cccccc;
+  cursor: not-allowed;
+}
+
+.btnCancel {
+  background: transparent;
+  color: #676879;
+  border: 2px solid #e1e5e9;
+}
+
+.btnCancel:hover {
+  background: #ffebee;
+  border-color: #ef5350;
+  color: #c62828;
+}
+
+.servicesSection {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.serviceOption {
+  border: 2px solid #e1e5e9;
+  border-radius: 8px;
+  padding: 16px;
+  transition: border-color 0.2s ease;
+}
+
+.serviceOption:hover {
+  border-color: #0085ff;
+}
+
+.serviceCheckbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.serviceCheckbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  margin-top: 2px;
+}
+
+.serviceInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.serviceInfo strong {
+  color: #323338;
+  font-size: 14px;
+}
+
+.serviceInfo small {
+  color: #676879;
+  font-size: 12px;
+}
+
+.galleryPreview {
+  margin-top: 20px;
+}
+
+.galleryPreview h4 {
+  margin: 0 0 12px 0;
+  color: #323338;
+  font-size: 16px;
+}
+
+.galleryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.galleryItem {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f5f6f8;
+}
+
+.galleryItem img {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+}
+
+.removeBtn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(255, 0, 0, 0.8);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.charCount {
+  color: #676879;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.fileInput {
+  padding: 8px !important;
+}
+
+.required {
+  color: #dc3545;
+}
+
+.validationError {
+  color: #dc3545;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+@media (max-width: 768px) {
+  .formRow {
+    grid-template-columns: 1fr;
+  }
+
+  .stepsList {
+    overflow-x: auto;
+    padding-bottom: 10px;
+  }
+
+  .step {
+    min-width: 60px;
+  }
+
+  .stepTitle {
+    font-size: 10px;
+    max-width: 60px;
+  }
+
+  .footerRight {
+    flex-direction: column;
+  }
+}

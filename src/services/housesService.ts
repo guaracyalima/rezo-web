@@ -16,19 +16,36 @@ import {
   Timestamp
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { User } from 'firebase/auth';
 import { rezosDb as db, storage, auth } from '../app/lib/firebase';
 
 // TypeScript interfaces based on the houses collection schema
 export interface Leader {
   name: string;
-  photo?: string;
-  bio: string;
-  contact: string;
+  contact: string; // email
+  cpf: string;
+  mobilePhone: string;
+  address: string;
+  addressNumber: string;
+  complement?: string;
+  province: string; // bairro
+  postalCode: string;
+  birthDate: string;
 }
 
 export interface Location {
-  lat: number;
-  lng: number;
+  address: string;
+  addressNumber: string;
+  complement?: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  coordinates?: {
+    lat: number;
+    lng: number;
+  };
 }
 
 export interface SocialMedia {
@@ -37,38 +54,77 @@ export interface SocialMedia {
 }
 
 export interface House {
-  id?: string;
+  id: string;
+  name: string;
+  description?: string;
+  ownerId: string; // Corrigido: era owner
+  responsibles: string[]; // Adicionado campo responsibles
+  leader: Leader;
+  location: Location;
   logo?: string;
   gallery?: string[];
-  name: string;
-  leader: Leader;
-  phone: string;
-  whatsapp?: string;
+  socialMedia?: {
+    website?: string;
+    facebook?: string;
+    instagram?: string;
+    youtube?: string;
+  };
   accessibility?: string;
-  street: string;
-  neighborhood: string;
-  number: string;
-  complement?: string;
-  zipCode: string;
-  city: string;
-  state: string;
-  location: Location;
-  about: string;
-  socialMedia?: SocialMedia;
-  cult: string;
-  owner: string;
+  phone?: string;
+  whatsapp?: string;
+  email?: string;
+  cult?: string;
+  about?: string;
+  businessDocument?: string;
+  companyType?: string;
+  mobilePhone?: string;
+  incomeValue?: number;
+  allowBookings?: boolean;
+  allowShop?: boolean;
+  allowEvents?: boolean;
+  enabledShop?: boolean; // Adicionado campo enabledShop
   approved: boolean;
   deleted: boolean;
-  responsibles: string[];
-  notificationTemplate?: string;
-  enabledShop: boolean;
-  createdAt?: Timestamp;
-  updatedAt?: Timestamp;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
 }
 
-export interface CreateHouseData extends Omit<House, 'id' | 'owner' | 'approved' | 'deleted' | 'createdAt' | 'updatedAt'> {}
+export interface CreateHouseData {
+  name: string;
+  description?: string;
+  shortDescription?: string;
+  email: string;
+  phone?: string;
+  mobilePhone?: string;
+  website?: string;
+  
+  leader: Leader;
+  location: Location;
+  
+  // Business options
+  allowBookings?: boolean;
+  allowEvents?: boolean;
+  allowShop?: boolean;
+  
+  // Business info
+  businessDocument?: string;
+  companyType?: 'MEI' | 'LIMITED' | 'INDIVIDUAL' | 'ASSOCIATION';
+  incomeValue?: number;
+  
+  // Visual
+  logo?: string;
+  images?: string[];
+  
+  // Meta
+  tags?: string[];
+  isPublic?: boolean;
+  requiresApproval?: boolean;
+}
 
-export interface UpdateHouseData extends Partial<Omit<House, 'id' | 'owner' | 'createdAt'>> {}
+export interface UpdateHouseData extends Partial<Omit<House, 'id' | 'ownerId' | 'createdAt'>> {
+  responsibles?: string[];
+  enabledShop?: boolean;
+}
 
 export interface HouseFilters {
   cult?: string;
@@ -87,6 +143,39 @@ export interface PaginationOptions {
 const HOUSES_COLLECTION = 'houses';
 
 // Create a new house
+// Função para verificar email duplicado
+export const checkEmailExists = async (email: string): Promise<boolean> => {
+  try {
+    const q = query(
+      collection(db, HOUSES_COLLECTION),
+      where('leader.contact', '==', email),
+      where('deleted', '==', false)
+    );
+    const querySnapshot = await getDocs(q);
+    return !querySnapshot.empty;
+  } catch (error) {
+    console.error('Error checking email:', error);
+    return false;
+  }
+};
+
+// Função para verificar CPF/CNPJ duplicado
+export const checkDocumentExists = async (document: string): Promise<boolean> => {
+  try {
+    console.log("cabeca d eminha pica 2");
+    const cleanDocument = document.replace(/[^\d]/g, ''); // Remove máscaras
+    const q = query(
+      collection(db, HOUSES_COLLECTION),
+      where('businessDocument', '==', cleanDocument)
+    );
+    const querySnapshot = await getDocs(q);
+    return !querySnapshot.empty;
+  } catch (error) {
+    console.error('Error checking document:', error);
+    return false;
+  }
+};
+
 export const createHouse = async (houseData: CreateHouseData): Promise<string> => {
   try {
     const user = auth.currentUser;
@@ -94,20 +183,43 @@ export const createHouse = async (houseData: CreateHouseData): Promise<string> =
       throw new Error('User must be authenticated to create a house');
     }
 
-    const newHouse: Omit<House, 'id'> = {
+    // Verificar se email já está cadastrado
+    if (houseData.email) {
+      const emailExists = await checkEmailExists(houseData.email);
+      if (emailExists) {
+        throw new Error('Este email já está sendo utilizado por outra casa.');
+      }
+    }
+
+    // Verificar se documento já está cadastrado
+    if (houseData.businessDocument) {
+      const documentExists = await checkDocumentExists(houseData.businessDocument);
+      if (documentExists) {
+        throw new Error('Este CPF/CNPJ já está sendo utilizado por outra casa.');
+      }
+    }
+
+    const newHouse: House = {
       ...houseData,
-      owner: user.uid,
-      approved: true, // MVP: Auto-approve all houses
+      ownerId: user.uid, // Corrigindo: usar o ID do usuário autenticado
+      responsibles: [], // Array vazio inicialmente
+      id: '', // Will be set after creation
+      approved: houseData.allowBookings || houseData.allowShop || houseData.allowEvents ? true : false,
       deleted: false,
       createdAt: Timestamp.now(),
-      updatedAt: Timestamp.now()
+      updatedAt: Timestamp.now(),
     };
 
-    const docRef = await addDoc(collection(db, HOUSES_COLLECTION), newHouse);
+    // Remove id temporarily for creation
+    const { id, ...houseWithoutId } = newHouse;
+    
+    const docRef = await addDoc(collection(db, HOUSES_COLLECTION), houseWithoutId);
+    console.log('House created with ID:', docRef.id);
+    
     return docRef.id;
   } catch (error) {
     console.error('Error creating house:', error);
-    throw error;
+    throw new Error('Failed to create house');
   }
 };
 
@@ -145,18 +257,16 @@ export const updateHouse = async (houseId: string, updateData: UpdateHouseData):
     }
 
     // Check if user is owner or responsible
-    if (currentHouse.owner !== user.uid && !currentHouse.responsibles.includes(user.uid)) {
-      throw new Error('User not authorized to update this house');
+    if (currentHouse.ownerId !== user.uid && !currentHouse.responsibles.includes(user.uid)) {
+      throw new Error('You do not have permission to update this house');
     }
 
-    // Only owner can update responsibles and enabledShop
-    if (currentHouse.owner !== user.uid) {
+    // Only owner can update certain fields
+    if (currentHouse.ownerId !== user.uid) {
       if (updateData.responsibles !== undefined || updateData.enabledShop !== undefined) {
-        throw new Error('Only the owner can update responsibles or enabledShop');
+        throw new Error('Only the house owner can update responsibles or shop settings');
       }
-    }
-
-    const docRef = doc(db, HOUSES_COLLECTION, houseId);
+    }    const docRef = doc(db, HOUSES_COLLECTION, houseId);
     await updateDoc(docRef, {
       ...updateData,
       updatedAt: Timestamp.now()
@@ -182,7 +292,7 @@ export const deleteHouse = async (houseId: string): Promise<void> => {
     }
 
     // Only owner can delete
-    if (currentHouse.owner !== user.uid) {
+    if (currentHouse.ownerId !== user.uid) {
       throw new Error('Only the owner can delete a house');
     }
 
@@ -259,9 +369,9 @@ export const getHouses = async (
       const searchLower = searchTerm.toLowerCase();
       houses = houses.filter(house => 
         house.name.toLowerCase().includes(searchLower) ||
-        house.about.toLowerCase().includes(searchLower) ||
+        house.about?.toLowerCase().includes(searchLower) ||
         house.leader.name.toLowerCase().includes(searchLower) ||
-        house.cult.toLowerCase().includes(searchLower)
+        house.cult?.toLowerCase().includes(searchLower)
       );
     }
 
@@ -288,7 +398,7 @@ export const getHousesByOwner = async (ownerId?: string): Promise<House[]> => {
 
     const q = query(
       collection(db, HOUSES_COLLECTION),
-      where('owner', '==', userId),
+      where('ownerId', '==', userId),
       where('deleted', '==', false),
       orderBy('createdAt', 'desc')
     );
@@ -343,7 +453,7 @@ export const addResponsible = async (houseId: string, responsibleId: string): Pr
       throw new Error('House not found');
     }
 
-    if (currentHouse.owner !== user.uid) {
+    if (currentHouse.ownerId !== user.uid) {
       throw new Error('Only the owner can add responsibles');
     }
 
@@ -375,7 +485,7 @@ export const removeResponsible = async (houseId: string, responsibleId: string):
       throw new Error('House not found');
     }
 
-    if (currentHouse.owner !== user.uid) {
+    if (currentHouse.ownerId !== user.uid) {
       throw new Error('Only the owner can remove responsibles');
     }
 
@@ -445,4 +555,43 @@ export const getBrazilianStates = (): string[] => {
     'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 
     'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
   ];
+};
+
+// Function to create wallet
+export const createHouseWallet = async (houseId: string, houseData: CreateHouseData, userId: string) => {
+  const walletData = {
+    houseId: houseId,
+    leader: {
+      name: houseData.leader.name,
+      contact: houseData.leader.contact,
+      cpf: houseData.leader.cpf || houseData.businessDocument,
+      incomeValue: houseData.incomeValue || 1500,
+      mobilePhone: houseData.leader.mobilePhone,
+      address: houseData.leader.address,
+      addressNumber: houseData.leader.addressNumber,
+      complement: houseData.leader.complement || '',
+      province: houseData.leader.province,
+      postalCode: houseData.leader.postalCode,
+      companyType: houseData.companyType || '',
+      birthDate: houseData.leader.birthDate
+    },
+    auth: {
+      uid: userId
+    }
+  };
+
+  const response = await fetch('https://primary-production-9acc.up.railway.app/webhook/onboarding-owner', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'rhouse_token': '$2a$12$38YmZFfquehxyDuDFijj4.dYY1WOWF3m5UZz8uKAQMuwOE2ma5KpK'
+    },
+    body: JSON.stringify(walletData)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create wallet: ${response.statusText}`);
+  }
+
+  return response.json();
 };

@@ -26,7 +26,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPath, onMenuClick }) => {
       icon: '🏢',
       label: 'Minhas Casas',
       path: '/dashboard/houses',
-      badge: 'New'
     },
     {
       icon: '🔮',

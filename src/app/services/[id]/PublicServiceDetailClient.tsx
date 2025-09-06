@@ -211,6 +211,29 @@ export default function PublicServiceDetailClient({ service, house }: PublicServ
                 <div className="service-share">
                   <ServiceShare service={service as any} houseName={house?.name} />
                 </div>
+                  {/* House Info */}
+              {house && (
+                <div className="provider-info">
+                  <h3>🏠 Oferecido por</h3>
+                  <div className="house-card">
+                    <div className="house-info">
+                      {house.logo && (
+                        <img src={house.logo} alt={house.name} className="house-logo" />
+                      )}
+                      <div>
+                        <h4 className="house-name">{house.name}</h4>
+                        <p className="house-location">{house.city}, {house.state}</p>
+                        {house.approved && (
+                          <span className="verified-badge">✓ Casa Verificada</span>
+                        )}
+                      </div>
+                    </div>
+                    <a href={`/houses/${house.id}`} className="view-house-btn">
+                      Ver Casa
+                    </a>
+                  </div>
+                </div>
+              )}
               </div>
 
               {/* Contact Actions */}
@@ -234,22 +257,6 @@ export default function PublicServiceDetailClient({ service, house }: PublicServ
                     📅 Agendar Agora
                   </button>
                   
-                  {/* Debug button */}
-                  <button 
-                    onClick={() => {
-                      console.log('🧪 Debug button - forcing state to true');
-                      setShowScheduling(prev => {
-                        console.log('🧪 Previous state:', prev);
-                        console.log('🧪 Setting to true');
-                        return true;
-                      });
-                    }}
-                    style={{ background: '#ff6b35', color: 'white' }}
-                    className="contact-btn"
-                  >
-                    🧪 DEBUG MODAL
-                  </button>
-                  
                   {house?.whatsapp && (
                     <a 
                       href={`https://wa.me/${house.whatsapp.replace(/\D/g, '')}?text=Olá! Tenho interesse no serviço: ${service.title}`}
@@ -260,40 +267,11 @@ export default function PublicServiceDetailClient({ service, house }: PublicServ
                       💬 WhatsApp
                     </a>
                   )}
-                  {house?.phone && (
-                    <a 
-                      href={`tel:${house.phone}`}
-                      className="contact-btn phone"
-                    >
-                      📞 Ligar
-                    </a>
-                  )}
+                 
                 </div>
               </div>
 
-              {/* House Info */}
-              {house && (
-                <div className="provider-info">
-                  <h3>🏠 Oferecido por</h3>
-                  <div className="house-card">
-                    <div className="house-info">
-                      {house.logo && (
-                        <img src={house.logo} alt={house.name} className="house-logo" />
-                      )}
-                      <div>
-                        <h4 className="house-name">{house.name}</h4>
-                        <p className="house-location">{house.city}, {house.state}</p>
-                        {house.approved && (
-                          <span className="verified-badge">✓ Casa Verificada</span>
-                        )}
-                      </div>
-                    </div>
-                    <a href={`/houses/${house.id}`} className="view-house-btn">
-                      Ver Casa
-                    </a>
-                  </div>
-                </div>
-              )}
+            
             </div>
           </div>
 

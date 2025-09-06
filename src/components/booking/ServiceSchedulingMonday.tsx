@@ -60,20 +60,15 @@ const ServiceScheduling: React.FC<ServiceSchedulingProps> = ({
   const { user } = useAuth();
   const { showToast } = useToast();
   
-  const [currentStep, setCurrentStep] = useState<'time' | 'details' | 'confirmation'>('time');
+  // Estados do componente
+  const [currentStep, setCurrentStep] = useState<'slots' | 'confirmation'>('slots');
   const [selectedSlot, setSelectedSlot] = useState<WeeklyTimeSlot | null>(null);
   const [availableSlots, setAvailableSlots] = useState<WeeklyTimeSlot[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   
-  // Form data
-  const [customerName, setCustomerName] = useState(user?.displayName || '');
-  const [customerEmail, setCustomerEmail] = useState(user?.email || '');
-  const [customerPhone, setCustomerPhone] = useState('');
-  const [customerCpf, setCustomerCpf] = useState('');
-  const [customerNotes, setCustomerNotes] = useState('');
-  const [address, setAddress] = useState('');
-  const [complement, setComplement] = useState('');
+  // Estados do formulário (só o que é necessário)
+  const [notes, setNotes] = useState('');
 
   // Get next 7 days including today
   const getNext7Days = () => {
@@ -91,31 +86,17 @@ const ServiceScheduling: React.FC<ServiceSchedulingProps> = ({
 
   const next7Days = getNext7Days();
 
-  // Função para formatar CPF/CNPJ
-  const formatCpfCnpj = (value: string): string => {
-    // Remove tudo que não é número
-    const numbers = value.replace(/\D/g, '');
-    
-    // Se tem 11 dígitos ou menos, formatar como CPF
-    if (numbers.length <= 11) {
-      return numbers
-        .replace(/(\d{3})(\d)/, '$1.$2')
-        .replace(/(\d{3})(\d)/, '$1.$2')
-        .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-    }
-    
-    // Se tem mais de 11, formatar como CNPJ
-    return numbers
-      .replace(/(\d{2})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d)/, '$1/$2')
-      .replace(/(\d{4})(\d{1,2})$/, '$1-$2');
-  };
+  // Função para formatar CPF/CNPJ - removida pois não precisamos mais
 
-  const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatCpfCnpj(e.target.value);
-    setCustomerCpf(formatted);
-  };
+  // Verificar se usuário está logado
+  useEffect(() => {
+    if (!user) {
+      // Salvar URL atual para redirecionamento pós-login
+      sessionStorage.setItem('redirectAfterLogin', window.location.pathname + window.location.search);
+      // Redirecionar para login
+      window.location.href = '/login';
+    }
+  }, [user]);
 
   useEffect(() => {
     console.log('🚀 ServiceSchedulingMonday mounted with service:', {
@@ -199,12 +180,32 @@ const ServiceScheduling: React.FC<ServiceSchedulingProps> = ({
 
   const handleSlotSelect = (slot: WeeklyTimeSlot) => {
     setSelectedSlot(slot);
-    setCurrentStep('details');
+    setCurrentStep('confirmation');
   };
 
-  // Função para processar o pagamento
+  // Função para processar o pagamento com estrutura simplificada
   const processPayment = async (bookingId: string, bookingData: BookingData) => {
     try {
+      // Baixar a imagem do Firebase e converter para base64
+      let imageBase64 = '';
+      if (service.images && service.images.length > 0) {
+        try {
+          const response = await fetch(service.images[0]);
+          const blob = await response.blob();
+          imageBase64 = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              const base64 = reader.result as string;
+              resolve(base64.split(',')[1]); // Remove o prefixo data:image/...;base64,
+            };
+            reader.readAsDataURL(blob);
+          });
+        } catch (error) {
+          console.warn('Erro ao baixar imagem:', error);
+          imageBase64 = '';
+        }
+      }
+
       const paymentData = {
         houseId: service.houseId,
         amount: service.basePrice,
@@ -212,11 +213,15 @@ const ServiceScheduling: React.FC<ServiceSchedulingProps> = ({
         userId: user!.uid,
         bookingId: bookingId,
         serviceId: service.id!,
-        date: selectedSlot!.date,
-        billingType: "CREDIT_CARD",
-        customerName: customerName.trim(),
-        cpfCnpj: customerCpf.trim(),
-        email: customerEmail.trim()
+        items: [
+          {
+            imageBase64: imageBase64,
+            name: service.title,
+            quantity: 1,
+            value: service.basePrice,
+            externalReference: bookingId
+          }
+        ]
       };
 
       console.log('💳 Processando pagamento:', paymentData);
@@ -240,6 +245,12 @@ const ServiceScheduling: React.FC<ServiceSchedulingProps> = ({
         throw new Error('Erro ao gerar link de pagamento');
       }
 
+      // Fechar o modal antes de mostrar o SweetAlert
+      if (onClose) {
+        onClose();
+      }
+// Redirecionar para a página de pagamento
+      window.open(result.checkoutUrl, '_blank');
       // Mostrar SweetAlert informando sobre o redirecionamento
       await Swal.fire({
         title: '🎉 Agendamento Confirmado!',
@@ -274,27 +285,17 @@ const ServiceScheduling: React.FC<ServiceSchedulingProps> = ({
   const handleBookingSubmit = async () => {
     if (!selectedSlot || !user) return;
 
-    // Validar campos obrigatórios
-    if (!customerName.trim() || !customerEmail.trim() || !customerCpf.trim()) {
-      showToast({
-        type: 'error',
-        title: 'Campos obrigatórios',
-        message: 'Por favor, preencha nome, email e CPF/CNPJ'
-      });
-      return;
-    }
-
     try {
       setSubmitting(true);
 
       const bookingData: BookingData = {
         serviceId: service.id!,
-        providerId: service.providerId || service.houseId, // Use houseId if providerId not available
+        providerId: service.providerId || service.houseId,
         customerId: user.uid,
         houseId: service.houseId,
-        customerName: customerName.trim(),
-        customerEmail: customerEmail.trim(),
-        customerPhone: customerPhone.trim(),
+        customerName: user.displayName || user.email || 'Usuário',
+        customerEmail: user.email || '',
+        customerPhone: '',
         serviceTitle: service.title,
         servicePrice: service.basePrice,
         serviceDuration: service.duration || 60,
@@ -309,7 +310,7 @@ const ServiceScheduling: React.FC<ServiceSchedulingProps> = ({
         paymentStatus: 'pending',
         status: 'pending',
         calendarReminders: true,
-        customerNotes: customerNotes.trim()
+        customerNotes: notes.trim()
       };
 
       console.log('📋 Creating booking with data:', {
@@ -319,17 +320,6 @@ const ServiceScheduling: React.FC<ServiceSchedulingProps> = ({
         scheduledDate: bookingData.scheduledDate,
         scheduledTime: bookingData.scheduledTime
       });
-
-      // Add location for in-person services
-      if (service.isInPerson && address.trim()) {
-        bookingData.location = {
-          address: address.trim(),
-          city: 'São Paulo', // Default - can be made dynamic
-          state: 'SP', // Default - can be made dynamic
-          complement: complement.trim(),
-          instructions: ''
-        };
-      }
 
       console.log('📋 Creating booking:', bookingData);
       const bookingId = await createBooking(bookingData);
@@ -417,16 +407,12 @@ const ServiceScheduling: React.FC<ServiceSchedulingProps> = ({
           
           {/* Progress Steps */}
           <div className="progress-steps">
-            <div className={`step ${currentStep === 'time' ? 'active' : 'completed'}`}>
+            <div className={`step ${currentStep === 'slots' ? 'active' : 'completed'}`}>
               <span className="step-number">1</span>
               <span className="step-label">Escolher Horário</span>
             </div>
-            <div className={`step ${currentStep === 'details' ? 'active' : currentStep === 'confirmation' ? 'completed' : ''}`}>
-              <span className="step-number">2</span>
-              <span className="step-label">Seus Dados</span>
-            </div>
             <div className={`step ${currentStep === 'confirmation' ? 'active' : ''}`}>
-              <span className="step-number">3</span>
+              <span className="step-number">2</span>
               <span className="step-label">Confirmação</span>
             </div>
           </div>
@@ -434,7 +420,7 @@ const ServiceScheduling: React.FC<ServiceSchedulingProps> = ({
 
         {/* Content */}
         <div className="monday-content">
-          {currentStep === 'time' && (
+          {currentStep === 'slots' && (
             <div className="time-selection">
               <h3 className="section-title">Escolha um horário</h3>
               <p className="section-subtitle">Selecione um horário disponível na semana</p>
@@ -474,118 +460,6 @@ const ServiceScheduling: React.FC<ServiceSchedulingProps> = ({
             </div>
           )}
 
-          {currentStep === 'details' && selectedSlot && (
-            <div className="details-form">
-              <h3 className="section-title">Seus dados</h3>
-              <p className="section-subtitle">
-                Agendamento para {getDayName(selectedSlot.dayOfWeek)}, {selectedSlot.displayDate} às {selectedSlot.time}
-              </p>
-              
-              <div className="form-grid">
-                <div className="form-group">
-                  <label className="monday-label">Nome completo *</label>
-                  <input
-                    type="text"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    className="monday-input"
-                    placeholder="Seu nome completo"
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="monday-label">Email *</label>
-                  <input
-                    type="email"
-                    value={customerEmail}
-                    onChange={(e) => setCustomerEmail(e.target.value)}
-                    className="monday-input"
-                    placeholder="seu@email.com"
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="monday-label">WhatsApp</label>
-                  <input
-                    type="tel"
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    className="monday-input"
-                    placeholder="(11) 99999-9999"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="monday-label">CPF/CNPJ *</label>
-                  <input
-                    type="text"
-                    value={customerCpf}
-                    onChange={handleCpfChange}
-                    className="monday-input"
-                    placeholder="000.000.000-00"
-                    maxLength={18}
-                    required
-                  />
-                </div>
-
-                {service.isInPerson && (
-                  <>
-                    <div className="form-group full-width">
-                      <label className="monday-label">Endereço (se presencial)</label>
-                      <input
-                        type="text"
-                        value={address}
-                        onChange={(e) => setAddress(e.target.value)}
-                        className="monday-input"
-                        placeholder="Rua, número, bairro"
-                      />
-                    </div>
-
-                    <div className="form-group full-width">
-                      <label className="monday-label">Complemento</label>
-                      <input
-                        type="text"
-                        value={complement}
-                        onChange={(e) => setComplement(e.target.value)}
-                        className="monday-input"
-                        placeholder="Apartamento, bloco, referência"
-                      />
-                    </div>
-                  </>
-                )}
-
-                <div className="form-group full-width">
-                  <label className="monday-label">Observações</label>
-                  <textarea
-                    value={customerNotes}
-                    onChange={(e) => setCustomerNotes(e.target.value)}
-                    className="monday-textarea"
-                    placeholder="Alguma informação adicional..."
-                    rows={3}
-                  />
-                </div>
-              </div>
-
-              <div className="form-actions">
-                <button
-                  onClick={() => setCurrentStep('time')}
-                  className="btn-secondary"
-                >
-                  Voltar
-                </button>
-                <button
-                  onClick={() => setCurrentStep('confirmation')}
-                  className="btn-primary"
-                  disabled={!customerName.trim() || !customerEmail.trim() || !customerCpf.trim()}
-                >
-                  Continuar
-                </button>
-              </div>
-            </div>
-          )}
-
           {currentStep === 'confirmation' && selectedSlot && (
             <div className="confirmation">
               <h3 className="section-title">Confirmar agendamento</h3>
@@ -618,9 +492,21 @@ const ServiceScheduling: React.FC<ServiceSchedulingProps> = ({
                 </div>
               </div>
 
+              {/* Campo para observações */}
+              <div className="form-group full-width">
+                <label className="monday-label">Observações (opcional)</label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="monday-textarea"
+                  placeholder="Alguma informação adicional..."
+                  rows={3}
+                />
+              </div>
+
               <div className="form-actions">
                 <button
-                  onClick={() => setCurrentStep('details')}
+                  onClick={() => setCurrentStep('slots')}
                   className="btn-secondary"
                   disabled={submitting}
                 >

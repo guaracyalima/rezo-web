@@ -35,8 +35,17 @@ export default function LoginPage() {
       
       console.log('Login successful:', userProfile);
       
-      // Redirect to dashboard on success
-      window.location.href = '/dashboard/houses';
+      // Check if there's a redirect URL saved after login
+      const redirectAfterLogin = sessionStorage.getItem('redirectAfterLogin');
+      
+      if (redirectAfterLogin) {
+        // Clear the redirect URL and redirect to the saved page
+        sessionStorage.removeItem('redirectAfterLogin');
+        window.location.href = redirectAfterLogin;
+      } else {
+        // Default redirect to dashboard
+        window.location.href = '/dashboard/houses';
+      }
     } catch (error: any) {
       setError(error.message || 'Erro ao fazer login');
     } finally {
